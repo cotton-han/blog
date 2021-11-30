@@ -4,28 +4,48 @@ import Joi from '@hapi/joi';
 
 const { ObjectId } = mongoose.Types;
 
-export const checkObjectId = (ctx, next) => {
+export const getPostById = async (ctx, next) => {
   const { id } = ctx.params;
   if (!ObjectId.isValid(id)) {
     ctx.status = 400;
+    return;
+  }
+  try {
+    const post = await Post.findById(id);
+    if (!post) {
+      ctx.status = 404;
+      return;
+    }
+    ctx.state.post = post;
+    return next();
+  } catch (e) {
+    ctx.throw(500, e);
+  }
+};
+
+export const checkOwnPost = (ctx, next) => {
+  const { user, post } = ctx.state;
+  if (post.user._id.toString() !== user._id) {
+    ctx.status = 403;
     return;
   }
   return next();
 };
 
 /*
-POST /api/posts
-{
-  title: '제목',
-  body: '내용',
-  tags: ['태그1', '태그2']
-}
+  POST /api/posts
+  {
+    title: '제목',
+    body: '내용',
+    tags: ['태그1', '태그2']
+  }
 */
 export const write = async ctx => {
   const schema = Joi.object().keys({
     title: Joi.string().required(),
     body: Joi.string().required(),
     tags: Joi.array().items(Joi.string()).required(),
+    user: ctx.state.user,
   });
 
   const result = schema.validate(ctx.request.body);
@@ -50,7 +70,7 @@ export const write = async ctx => {
 };
 
 /*
-GET /api/posts
+  GET /api/posts?username=&tag=&page=
 */
 export const list = async ctx => {
   const page = parseInt(ctx.query.page || '1', 10);
@@ -59,14 +79,21 @@ export const list = async ctx => {
     ctx.status = 400;
     return;
   }
+
+  const { username, tag } = ctx.query;
+  const query = {
+    ...(username ? { 'user.username': username } : {}),
+    ...(tag ? { tags: tag } : {}),
+  };
+
   try {
-    const posts = await Post.find()
+    const posts = await Post.find(query)
       .sort({ _id: -1 })
       .limit(10)
       .skip((page - 1) * 10)
       .lean() // JSON 변환 불필요
       .exec();
-    const postCount = await Post.countDocuments().exec();
+    const postCount = await Post.countDocuments(query).exec();
     ctx.set('Last-Page', Math.ceil(postCount / 10));
     ctx.body = posts.map(post => ({
       ...post,
@@ -79,24 +106,14 @@ export const list = async ctx => {
 };
 
 /*
-GET /api/posts/:id
+  GET /api/posts/:id
 */
 export const read = async ctx => {
-  const { id } = ctx.params;
-  try {
-    const post = await Post.findById(id).exec();
-    if (!post) {
-      ctx.status = 404;
-      return;
-    }
-    ctx.body = post;
-  } catch (e) {
-    ctx.throw(500, e);
-  }
+  ctx.body = ctx.state.post;
 };
 
 /*
-DELETE /api/posts/:id
+  DELETE /api/posts/:id
 */
 export const remove = async ctx => {
   const { id } = ctx.params;
@@ -109,12 +126,12 @@ export const remove = async ctx => {
 };
 
 /*
-PATCH /api/posts/:id
-{
-  title: "수정",
-  body: "수정 내용",
-  tags: ["수정", "태그"]
-}
+  PATCH /api/posts/:id
+  {
+    title: "수정",
+    body: "수정 내용",
+    tags: ["수정", "태그"]
+  }
 */
 export const update = async ctx => {
   const { id } = ctx.params;
