@@ -13,13 +13,13 @@
         "ecmaFeatures": {
             "jsx": true
         },
-        "ecmaVersion": "latest",
+        "ecmaVersion": 12,
         "sourceType": "module"
     },
     "plugins": ["react", "prettier"],
     "rules": {
-        "prettier/prettier": "error",
-        "no-unused-vars": "warn",
-        "no-console": "off"
+      "prettier/prettier": "error",
+      "no-console": "off",
+      "no-unused-vars": "warn"
     }
 }
