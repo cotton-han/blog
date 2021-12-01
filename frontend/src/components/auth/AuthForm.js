@@ -68,7 +68,7 @@ function AuthForm({ type, form, onChange, onSubmit, error }) {
           name="username"
           placeholder="아이디"
           onChange={onChange}
-          // value={form.username}
+          value={form.username}
         />
         <StyledInput
           autoComplete="new-password"
@@ -76,7 +76,7 @@ function AuthForm({ type, form, onChange, onSubmit, error }) {
           placeholder="비밀번호"
           type="password"
           onChange={onChange}
-          // value={form.password}
+          value={form.password}
         />
         {type === 'register' && (
           <StyledInput
@@ -85,7 +85,7 @@ function AuthForm({ type, form, onChange, onSubmit, error }) {
             placeholder="비밀번호 확인"
             type="password"
             onChange={onChange}
-            // value={form.passwordConfirm}
+            value={form.passwordConfirm}
           />
         )}
         {error && <ErrorMessage>{error}</ErrorMessage>}
